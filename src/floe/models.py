@@ -35,7 +35,6 @@ class Transaction:
     category: str
     description: str
     source: TransactionSource
-    user_id: int = 0
     date: str = field(default_factory=lambda: datetime.now().strftime("%d/%m/%Y"))
     note: str = ""
     timestamp: str = field(default_factory=lambda: datetime.now().isoformat(timespec="seconds"))
@@ -50,7 +49,6 @@ class Transaction:
             self.source.value,
             self.note,
             self.timestamp,
-            self.user_id,
         ]
 
     def format_summary_line(self) -> str:

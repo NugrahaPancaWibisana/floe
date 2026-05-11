@@ -4,15 +4,29 @@ from telegram import Update
 from telegram.constants import ParseMode
 from telegram.ext import ContextTypes
 
+from floe import config
 from floe.ai.gemini import parse_image, parse_text
 from floe.sheets.client import append_transaction
 
 logger = logging.getLogger(__name__)
 
 
+async def _check_access(update: Update) -> bool:
+    """Cek apakah user terdaftar di whitelist. Kirim pesan tolak jika tidak."""
+    user_id = update.effective_user.id
+    if user_id not in config.ALLOWED_USER_IDS:
+        logger.warning("Akses ditolak untuk user %s", user_id)
+        await update.message.reply_text("🚫 Maaf, kamu belum terdaftar untuk menggunakan bot ini.")
+        return False
+    return True
+
+
 async def handle_text(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     message = update.message.text
     if not message:
+        return
+
+    if not await _check_access(update):
         return
 
     logger.info(f"Pesan masuk dari {update.effective_user.id}: {message[:50]}")
@@ -27,8 +41,7 @@ async def handle_text(update: Update, context: ContextTypes.DEFAULT_TYPE) -> Non
         )
         return
 
-    tx.user_id = update.effective_user.id
-    success = append_transaction(tx)
+    success = append_transaction(tx, user_id=update.effective_user.id)
 
     if success:
         await update.message.reply_text(
@@ -44,6 +57,9 @@ async def handle_text(update: Update, context: ContextTypes.DEFAULT_TYPE) -> Non
 async def handle_photo(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     photos = update.message.photo
     if not photos:
+        return
+
+    if not await _check_access(update):
         return
 
     photo_file = await photos[-1].get_file()
@@ -63,8 +79,7 @@ async def handle_photo(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
         )
         return
 
-    tx.user_id = update.effective_user.id
-    success = append_transaction(tx)
+    success = append_transaction(tx, user_id=update.effective_user.id)
 
     if success:
         await update.message.reply_text(
