@@ -16,6 +16,8 @@ SCOPES = [
     "https://www.googleapis.com/auth/drive",
 ]
 
+BUDGET_HEADER = ["UserID", "Category", "Limit"]
+
 HEADER_ROW = ["Date", "Amount", "Type", "Category", "Description", "Source", "Note", "Timestamp"]
 
 
@@ -141,6 +143,71 @@ def delete_last_transaction(user_id: int) -> dict | None:
     except Exception as e:
         logger.error(f"Gagal menghapus transaksi: {e}")
         return None
+
+
+def _ensure_budgets_tab() -> gspread.Worksheet:
+    """Cari atau buat tab Budgets dengan header."""
+    client = _get_client()
+    sheet = client.open_by_key(config.SPREADSHEET_ID)
+
+    try:
+        return sheet.worksheet("Budgets")
+    except gspread.exceptions.WorksheetNotFound:
+        ws = sheet.add_worksheet(title="Budgets", rows=100, cols=len(BUDGET_HEADER))
+        ws.append_row(BUDGET_HEADER, value_input_option=ValueInputOption.user_entered)
+        logger.info("Tab Budgets dibuat")
+        return ws
+
+
+def set_budget(user_id: int, category: str, limit: int) -> None:
+    """Set atau update budget limit untuk user + kategori."""
+    ws = _ensure_budgets_tab()
+    records = ws.get_all_records()
+
+    for i, row in enumerate(records, start=2):
+        if int(row["UserID"]) == user_id and row["Category"] == category:
+            ws.update(f"C{i}", [[limit]], value_input_option=ValueInputOption.user_entered)
+            logger.info("Budget diupdate: user=%s category=%s limit=%s", user_id, category, limit)
+            return
+
+    ws.append_row([user_id, category, limit], value_input_option=ValueInputOption.user_entered)
+    logger.info("Budget ditambahkan: user=%s category=%s limit=%s", user_id, category, limit)
+
+
+def get_budgets(user_id: int) -> dict[str, int]:
+    """Ambil semua budget limit untuk user tertentu."""
+    ws = _ensure_budgets_tab()
+    records = ws.get_all_records()
+    return {row["Category"]: int(row["Limit"]) for row in records if int(row["UserID"]) == user_id}
+
+
+def check_budget_alert(user_id: int, category: str) -> str | None:
+    """Cek apakah pengeluaran bulan ini di kategori melebihi budget.
+    Return pesan alert jika ya, None jika aman atau tidak ada budget."""
+    budgets = get_budgets(user_id)
+    if category not in budgets:
+        return None
+
+    limit = budgets[category]
+    df = get_transactions_this_month(user_id)
+    if df.is_empty():
+        return None
+
+    spent = int(
+        df.filter((pl.col("Category") == category) & (pl.col("Type") == "pengeluaran"))[
+            "Amount"
+        ].sum()
+    )
+
+    if spent > limit:
+        return (
+            f"⚠️ *Peringatan Budget!*\n\n"
+            f"Kategori *{category}* sudah melebihi budget bulan ini:\n"
+            f"• Budget: Rp {limit:,}\n"
+            f"• Terpakai: Rp {spent:,}\n"
+            f"• Lebih: Rp {spent - limit:,}"
+        )
+    return None
 
 
 def compute_summary(df: pl.DataFrame) -> dict:
