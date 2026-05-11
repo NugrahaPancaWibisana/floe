@@ -6,7 +6,8 @@ from telegram.ext import ContextTypes
 
 from floe import config
 from floe.ai.gemini import parse_image, parse_text
-from floe.sheets.client import append_transaction
+from floe.models import TransactionType
+from floe.sheets.client import append_transaction, check_budget_alert
 
 logger = logging.getLogger(__name__)
 
@@ -55,6 +56,10 @@ async def handle_text(update: Update, context: ContextTypes.DEFAULT_TYPE) -> Non
             f"✅ *Berhasil dicatat!*\n\n{tx.format_summary_line()}",
             parse_mode=ParseMode.MARKDOWN,
         )
+        if tx.type == TransactionType.PENGELUARAN:
+            alert = check_budget_alert(user.id, tx.category)
+            if alert:
+                await message.reply_text(alert, parse_mode=ParseMode.MARKDOWN)
     else:
         await message.reply_text(
             "⚠️ Transaksi diparse tapi gagal disimpan ke Sheets. Cek log untuk detail."
@@ -98,5 +103,9 @@ async def handle_photo(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
             f"✅ *Foto berhasil dicatat!*\n\n{tx.format_summary_line()}",
             parse_mode=ParseMode.MARKDOWN,
         )
+        if tx.type == TransactionType.PENGELUARAN:
+            alert = check_budget_alert(user.id, tx.category)
+            if alert:
+                await message.reply_text(alert, parse_mode=ParseMode.MARKDOWN)
     else:
         await message.reply_text("⚠️ Foto diparse tapi gagal disimpan ke Sheets.")
