@@ -1,30 +1,49 @@
-import os
+import sys
 from pathlib import Path
 
-from dotenv import load_dotenv
-
-load_dotenv(Path(__file__).parent.parent.parent / ".env")
-
-
-def _require(key: str) -> str:
-    value = os.getenv(key)
-    if not value:
-        raise RuntimeError(f"Environment variable '{key}' tidak diset. Cek file .env kamu.")
-    return value
+from pydantic import Field, SecretStr, field_validator
+from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
-TELEGRAM_BOT_TOKEN: str = _require("TELEGRAM_BOT_TOKEN")
+class _Settings(BaseSettings):
+    model_config = SettingsConfigDict(
+        env_file=Path(__file__).parent.parent.parent / ".env",
+        hide_input_in_errors=True,
+    )
 
-ALLOWED_USER_IDS: list[int] = [
-    int(x.strip()) for x in _require("ALLOWED_USER_IDS").split(",") if x.strip()
-]
+    TELEGRAM_BOT_TOKEN: SecretStr = Field(default=SecretStr(""))
+    ALLOWED_USER_IDS: list[int] = Field(default_factory=list)
+    GEMINI_API_KEY: SecretStr = Field(default=SecretStr(""))
+    GEMINI_MODEL: str = "gemini-2.0-flash-lite"
+    SPREADSHEET_ID: str = ""
+    GOOGLE_SERVICE_ACCOUNT_FILE: str = "service_account.json"
+    DAILY_SUMMARY_TIME: str = "21:00"
+    WEEKLY_SUMMARY_DAY: str = "sunday"
+    WEEKLY_SUMMARY_TIME: str = "20:00"
 
-GEMINI_API_KEY: str = _require("GEMINI_API_KEY")
-GEMINI_MODEL: str = os.getenv("GEMINI_MODEL", "gemini-2.0-flash-lite")
+    @field_validator("ALLOWED_USER_IDS", mode="before")
+    @classmethod
+    def _split_ids(cls, v: str | int | list) -> list[int]:
+        if isinstance(v, str):
+            return [int(x.strip()) for x in v.split(",") if x.strip()]
+        if isinstance(v, int):
+            return [v]
+        return v
 
-SPREADSHEET_ID: str = _require("SPREADSHEET_ID")
-GOOGLE_SERVICE_ACCOUNT_FILE: str = os.getenv("GOOGLE_SERVICE_ACCOUNT_FILE", "service_account.json")
 
-DAILY_SUMMARY_TIME: str = os.getenv("DAILY_SUMMARY_TIME", "21:00")
-WEEKLY_SUMMARY_DAY: str = os.getenv("WEEKLY_SUMMARY_DAY", "sunday")
-WEEKLY_SUMMARY_TIME: str = os.getenv("WEEKLY_SUMMARY_TIME", "20:00")
+_settings = _Settings()
+
+if not _settings.TELEGRAM_BOT_TOKEN.get_secret_value():
+    sys.exit("Fatal: TELEGRAM_BOT_TOKEN tidak diset di .env")
+if not _settings.GEMINI_API_KEY.get_secret_value():
+    sys.exit("Fatal: GEMINI_API_KEY tidak diset di .env")
+
+TELEGRAM_BOT_TOKEN: SecretStr = _settings.TELEGRAM_BOT_TOKEN
+ALLOWED_USER_IDS: list[int] = _settings.ALLOWED_USER_IDS
+GEMINI_API_KEY: SecretStr = _settings.GEMINI_API_KEY
+GEMINI_MODEL: str = _settings.GEMINI_MODEL
+SPREADSHEET_ID: str = _settings.SPREADSHEET_ID
+GOOGLE_SERVICE_ACCOUNT_FILE: str = _settings.GOOGLE_SERVICE_ACCOUNT_FILE
+DAILY_SUMMARY_TIME: str = _settings.DAILY_SUMMARY_TIME
+WEEKLY_SUMMARY_DAY: str = _settings.WEEKLY_SUMMARY_DAY
+WEEKLY_SUMMARY_TIME: str = _settings.WEEKLY_SUMMARY_TIME
