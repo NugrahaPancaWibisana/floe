@@ -62,6 +62,26 @@ def get_transactions_today(user_id: int) -> pl.DataFrame:
     return _get_transactions_by_date(today, user_id)
 
 
+def get_transactions_this_month(user_id: int) -> pl.DataFrame:
+    try:
+        ws = _ensure_user_tab(user_id)
+        records = ws.get_all_records()
+
+        if not records:
+            return pl.DataFrame()
+
+        df = pl.DataFrame(records)
+        df = df.with_columns(pl.col("Date").str.strptime(pl.Date, "%d/%m/%Y", strict=False))
+        now = datetime.now()
+        df = df.filter(
+            (pl.col("Date").dt.year() == now.year) & (pl.col("Date").dt.month() == now.month)
+        )
+        return df
+    except Exception as e:
+        logger.error(f"Gagal membaca transaksi bulanan: {e}")
+        return pl.DataFrame()
+
+
 def get_transactions_this_week(user_id: int) -> pl.DataFrame:
     try:
         ws = _ensure_user_tab(user_id)
