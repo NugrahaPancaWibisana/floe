@@ -3,6 +3,12 @@ import logging
 from datetime import datetime
 
 import google.generativeai as genai
+from tenacity import (
+    after_log,
+    retry,
+    stop_after_attempt,
+    wait_exponential,
+)
 
 from floe import config
 from floe.models import VALID_CATEGORIES, Transaction, TransactionSource, TransactionType
@@ -49,15 +55,28 @@ Aturan penting:
 
 def parse_text(message: str) -> Transaction | None:
     prompt = f"Pesan dari pengguna:\n{message}"
-    return _call_gemini(prompt, source=TransactionSource.TEXT, note=message)
+    try:
+        return _call_gemini(prompt, source=TransactionSource.TEXT, note=message)
+    except Exception as e:
+        logger.error("Gemini gagal setelah semua retry: %s", e)
+        return None
 
 
 def parse_image(image_bytes: bytes, mime_type: str = "image/jpeg") -> Transaction | None:
     image_part = {"mime_type": mime_type, "data": image_bytes}
     prompt = "Ekstrak informasi transaksi dari gambar berikut:"
-    return _call_gemini([prompt, image_part], source=TransactionSource.PHOTO, note="[foto]")
+    try:
+        return _call_gemini([prompt, image_part], source=TransactionSource.PHOTO, note="[foto]")
+    except Exception as e:
+        logger.error("Gemini gagal setelah semua retry: %s", e)
+        return None
 
 
+@retry(
+    stop=stop_after_attempt(3),
+    wait=wait_exponential(min=1, max=8),
+    after=after_log(logger, logging.WARNING),
+)
 def _call_gemini(
     prompt: str | list,
     source: TransactionSource,
@@ -99,5 +118,5 @@ def _call_gemini(
         logger.error(f"Gagal parse JSON dari Gemini: {e}\nResponse: {raw_text}")
         return None
     except Exception as e:
-        logger.error(f"Error saat call Gemini: {e}")
-        return None
+        logger.warning("Gemini call failed (retrying...): %s", e)
+        raise

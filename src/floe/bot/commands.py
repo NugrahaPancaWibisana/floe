@@ -4,7 +4,7 @@ from telegram import Update
 from telegram.constants import ParseMode
 from telegram.ext import ContextTypes
 
-from floe.sheets.client import compute_summary, get_transactions_today, get_transactions_this_week
+from floe.sheets.client import compute_summary, get_transactions_this_week, get_transactions_today
 
 logger = logging.getLogger(__name__)
 
