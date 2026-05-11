@@ -13,3 +13,7 @@ wheels/
 .env
 credentials.json
 service_account.json
+
+# Agent instructions & docs (not part of the codebase)
+AGENTS.md
+guide.md
