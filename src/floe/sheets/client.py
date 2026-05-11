@@ -166,7 +166,11 @@ def set_budget(user_id: int, category: str, limit: int) -> None:
 
     for i, row in enumerate(records, start=2):
         if int(row["UserID"]) == user_id and row["Category"] == category:
-            ws.update(f"C{i}", [[limit]], value_input_option=ValueInputOption.user_entered)
+            ws.update(
+                values=[[limit]],
+                range_name=f"C{i}",
+                value_input_option=ValueInputOption.user_entered,
+            )
             logger.info("Budget diupdate: user=%s category=%s limit=%s", user_id, category, limit)
             return
 
@@ -178,7 +182,9 @@ def get_budgets(user_id: int) -> dict[str, int]:
     """Ambil semua budget limit untuk user tertentu."""
     ws = _ensure_budgets_tab()
     records = ws.get_all_records()
-    return {row["Category"]: int(row["Limit"]) for row in records if int(row["UserID"]) == user_id}
+    return {
+        str(row["Category"]): int(row["Limit"]) for row in records if int(row["UserID"]) == user_id
+    }
 
 
 def check_budget_alert(user_id: int, category: str) -> str | None:

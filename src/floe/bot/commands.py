@@ -134,7 +134,7 @@ async def cmd_budget(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None
     if user is None or message is None:
         return
 
-    args = context.args
+    args = context.args or []
     if len(args) < 2:
         budgets = get_budgets(user.id)
         if budgets:
