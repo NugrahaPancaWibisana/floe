@@ -16,6 +16,26 @@ SCOPES = [
 ]
 
 SHEET_TRANSACTIONS = "Transactions"
+HEADER_ROW = ["Date", "Amount", "Type", "Category", "Description", "Source", "Note", "Timestamp"]
+
+
+def _user_tab_name(user_id: int) -> str:
+    return f"Transactions - {user_id}"
+
+
+def _ensure_user_tab(user_id: int) -> gspread.Worksheet:
+    """Cari atau buat tab Transactions - {user_id} dengan header."""
+    client = _get_client()
+    sheet = client.open_by_key(config.SPREADSHEET_ID)
+    tab_name = _user_tab_name(user_id)
+
+    try:
+        return sheet.worksheet(tab_name)
+    except gspread.exceptions.WorksheetNotFound:
+        ws = sheet.add_worksheet(title=tab_name, rows=100, cols=len(HEADER_ROW))
+        ws.append_row(HEADER_ROW, value_input_option="USER_ENTERED")
+        logger.info("Tab baru dibuat: %s", tab_name)
+        return ws
 
 
 def _get_client() -> gspread.Client:
