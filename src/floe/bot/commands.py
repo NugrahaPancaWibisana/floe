@@ -4,7 +4,12 @@ from telegram import Update
 from telegram.constants import ParseMode
 from telegram.ext import ContextTypes
 
-from floe.sheets.client import compute_summary, get_transactions_this_week, get_transactions_today
+from floe.sheets.client import (
+    compute_summary,
+    delete_last_transaction,
+    get_transactions_this_week,
+    get_transactions_today,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -58,6 +63,20 @@ async def cmd_weekly(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None
     df = get_transactions_this_week()
     text = _format_summary(df, label="7 Hari Terakhir")
     await update.message.reply_text(text, parse_mode=ParseMode.MARKDOWN)
+
+
+async def cmd_delete(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    """Handler untuk /delete — hapus transaksi terakhir."""
+    result = delete_last_transaction()
+
+    if result is None:
+        await update.message.reply_text("📭 Belum ada transaksi yang bisa dihapus.")
+        return
+
+    await update.message.reply_text(
+        f"🗑️ *Transaksi dihapus:*\n\n➖ *{result['description']}*\n   Rp {result['amount']:,}",
+        parse_mode=ParseMode.MARKDOWN,
+    )
 
 
 def _format_summary(df, label: str) -> str:
