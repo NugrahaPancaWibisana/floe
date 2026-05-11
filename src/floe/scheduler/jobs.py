@@ -7,11 +7,7 @@ from telegram.ext import Application
 
 from floe import config
 from floe.bot.commands import _format_summary
-from floe.sheets.client import (
-    get_transactions_this_week,
-    get_transactions_today,
-    get_unique_user_ids,
-)
+from floe.sheets.client import get_transactions_this_week, get_transactions_today
 
 logger = logging.getLogger(__name__)
 
@@ -24,12 +20,7 @@ def _parse_time(time_str: str) -> time:
 
 
 async def _send_summary_to_users(context, get_transactions_fn, title: str, label: str) -> None:
-    user_ids = get_unique_user_ids()
-    if not user_ids:
-        logger.info("Tidak ada user_id ditemukan, lewati summary.")
-        return
-
-    for uid in user_ids:
+    for uid in config.ALLOWED_USER_IDS:
         df = get_transactions_fn(user_id=uid)
         text = f"{title}\n\n" + _format_summary(df, label=label)
         try:
