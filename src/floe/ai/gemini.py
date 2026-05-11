@@ -1,8 +1,10 @@
-import json
 import logging
 from datetime import datetime
+from typing import cast
 
-import google.generativeai as genai
+from google import genai
+from google.genai import types
+from pydantic import BaseModel
 from tenacity import (
     after_log,
     retry,
@@ -15,10 +17,22 @@ from floe.models import VALID_CATEGORIES, Transaction, TransactionSource, Transa
 
 logger = logging.getLogger(__name__)
 
-genai.configure(api_key=config.GEMINI_API_KEY)
-_model = genai.GenerativeModel(config.GEMINI_MODEL)
+client = genai.Client(api_key=config.GEMINI_API_KEY.get_secret_value())
 
-_SYSTEM_INSTRUCTION = f"""
+
+class GeminiOutput(BaseModel):
+    success: bool
+    date: str = ""
+    amount: int = 0
+    type: str = ""
+    category: str = ""
+    description: str = ""
+    note: str = ""
+    reason: str = ""
+
+
+def _system_instruction() -> str:
+    return f"""
 Kamu adalah asisten keuangan pribadi bernama Floe.
 Tugasmu HANYA mengekstrak informasi transaksi keuangan dari pesan atau gambar pengguna.
 Hari ini: {datetime.now().strftime("%d/%m/%Y")}.
@@ -54,16 +68,15 @@ Aturan penting:
 
 
 def parse_text(message: str) -> Transaction | None:
-    prompt = f"Pesan dari pengguna:\n{message}"
     try:
-        return _call_gemini(prompt, source=TransactionSource.TEXT, note=message)
+        return _call_gemini(message, source=TransactionSource.TEXT, note=message)
     except Exception as e:
         logger.error("Gemini gagal setelah semua retry: %s", e)
         return None
 
 
 def parse_image(image_bytes: bytes, mime_type: str = "image/jpeg") -> Transaction | None:
-    image_part = {"mime_type": mime_type, "data": image_bytes}
+    image_part = types.Part.from_bytes(data=image_bytes, mime_type=mime_type)
     prompt = "Ekstrak informasi transaksi dari gambar berikut:"
     try:
         return _call_gemini([prompt, image_part], source=TransactionSource.PHOTO, note="[foto]")
@@ -82,41 +95,38 @@ def _call_gemini(
     source: TransactionSource,
     note: str,
 ) -> Transaction | None:
-    try:
-        full_prompt = f"{_SYSTEM_INSTRUCTION}\n\n---\n\n"
-        if isinstance(prompt, str):
-            full_prompt = [full_prompt + prompt]
+    response = client.models.generate_content(
+        model=config.GEMINI_MODEL,
+        contents=prompt,
+        config=types.GenerateContentConfig(
+            system_instruction=_system_instruction(),
+            response_mime_type="application/json",
+            response_schema=GeminiOutput,
+        ),
+    )
+
+    output = cast(GeminiOutput | None, response.parsed)
+    if output is None:
+        if response.candidates:
+            finish_reason = response.candidates[0].finish_reason
+            reason = finish_reason.name if finish_reason else "UNKNOWN"
         else:
-            full_prompt = [full_prompt + prompt[0]] + prompt[1:]
-
-        response = _model.generate_content(full_prompt)
-        raw_text = response.text.strip()
-
-        if raw_text.startswith("```"):
-            raw_text = raw_text.split("```")[1]
-            if raw_text.startswith("json"):
-                raw_text = raw_text[4:]
-        raw_text = raw_text.strip()
-
-        data = json.loads(raw_text)
-
-        if not data.get("success"):
-            logger.info(f"Bukan transaksi: {data.get('reason', 'unknown')}")
-            return None
-
-        return Transaction(
-            date=data.get("date", datetime.now().strftime("%d/%m/%Y")),
-            amount=int(data["amount"]),
-            type=TransactionType(data["type"]),
-            category=data.get("category", "lainnya"),
-            description=data["description"],
-            source=source,
-            note=note,
+            reason = "UNKNOWN"
+        logger.error(
+            f"Gemini response tidak sesuai schema: finish_reason={reason}, text={response.text}"
         )
-
-    except json.JSONDecodeError as e:
-        logger.error(f"Gagal parse JSON dari Gemini: {e}\nResponse: {raw_text}")
         return None
-    except Exception as e:
-        logger.warning("Gemini call failed (retrying...): %s", e)
-        raise
+
+    if not output.success:
+        logger.info(f"Bukan transaksi: {output.reason}")
+        return None
+
+    return Transaction(
+        date=output.date or datetime.now().strftime("%d/%m/%Y"),
+        amount=output.amount,
+        type=TransactionType(output.type),
+        category=output.category or "lainnya",
+        description=output.description,
+        source=source,
+        note=note,
+    )
