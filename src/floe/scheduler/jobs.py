@@ -55,6 +55,9 @@ async def job_weekly_summary(context) -> None:
 
 def register_jobs(app: Application) -> None:
     job_queue = app.job_queue
+    if job_queue is None:
+        logger.error("JobQueue tidak tersedia — scheduler tidak akan berjalan")
+        return
 
     daily_time = _parse_time(config.DAILY_SUMMARY_TIME)
     job_queue.run_daily(
