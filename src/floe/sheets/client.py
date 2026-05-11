@@ -82,6 +82,36 @@ def _get_transactions_by_date(date_str: str) -> pl.DataFrame:
         return pl.DataFrame()
 
 
+def delete_last_transaction() -> dict | None:
+    """
+    Hapus baris transaksi terakhir dari sheet Transactions.
+    Return dict dengan description dan amount jika berhasil, None jika kosong.
+    """
+    try:
+        client = _get_client()
+        sheet = client.open_by_key(config.SPREADSHEET_ID)
+        ws = sheet.worksheet(SHEET_TRANSACTIONS)
+
+        all_values = ws.get_all_values()
+        if len(all_values) <= 1:
+            return None
+
+        row_index = len(all_values)
+        header = all_values[0]
+        last_row = all_values[-1]
+
+        description = last_row[header.index("Description")]
+        amount = int(last_row[header.index("Amount")])
+
+        ws.delete_rows(row_index)
+
+        logger.info(f"Transaksi dihapus: {description} - Rp {amount:,}")
+        return {"description": description, "amount": amount}
+    except Exception as e:
+        logger.error(f"Gagal menghapus transaksi: {e}")
+        return None
+
+
 def compute_summary(df: pl.DataFrame) -> dict:
     if df.is_empty():
         return {"total_in": 0, "total_out": 0, "net": 0, "by_category": {}}

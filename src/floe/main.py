@@ -3,7 +3,7 @@ import logging
 from telegram.ext import Application, CommandHandler, MessageHandler, filters
 
 from floe import config
-from floe.bot.commands import cmd_help, cmd_start, cmd_summary, cmd_weekly
+from floe.bot.commands import cmd_delete, cmd_help, cmd_start, cmd_summary, cmd_weekly
 from floe.bot.handlers import handle_photo, handle_text
 from floe.scheduler.jobs import register_jobs
 
@@ -25,6 +25,7 @@ def main() -> None:
     app.add_handler(CommandHandler("help", cmd_help))
     app.add_handler(CommandHandler("summary", cmd_summary))
     app.add_handler(CommandHandler("weekly", cmd_weekly))
+    app.add_handler(CommandHandler("delete", cmd_delete))
 
     # --- Daftarkan Message Handlers ---
     # Foto harus didaftarkan SEBELUM teks umum
