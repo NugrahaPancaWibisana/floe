@@ -39,12 +39,12 @@ def append_transaction(tx: Transaction) -> bool:
         return False
 
 
-def get_transactions_today() -> pl.DataFrame:
+def get_transactions_today(user_id: int | None = None) -> pl.DataFrame:
     today = datetime.now().strftime("%d/%m/%Y")
-    return _get_transactions_by_date(today)
+    return _get_transactions_by_date(today, user_id=user_id)
 
 
-def get_transactions_this_week() -> pl.DataFrame:
+def get_transactions_this_week(user_id: int | None = None) -> pl.DataFrame:
     try:
         client = _get_client()
         sheet = client.open_by_key(config.SPREADSHEET_ID)
@@ -55,6 +55,9 @@ def get_transactions_this_week() -> pl.DataFrame:
             return pl.DataFrame()
 
         df = pl.DataFrame(records)
+
+        if user_id is not None:
+            df = df.filter(pl.col("User ID") == user_id)
 
         df = df.with_columns(pl.col("Date").str.strptime(pl.Date, "%d/%m/%Y", strict=False))
         cutoff = datetime.now().date()
@@ -65,7 +68,7 @@ def get_transactions_this_week() -> pl.DataFrame:
         return pl.DataFrame()
 
 
-def _get_transactions_by_date(date_str: str) -> pl.DataFrame:
+def _get_transactions_by_date(date_str: str, user_id: int | None = None) -> pl.DataFrame:
     try:
         client = _get_client()
         sheet = client.open_by_key(config.SPREADSHEET_ID)
@@ -76,15 +79,19 @@ def _get_transactions_by_date(date_str: str) -> pl.DataFrame:
             return pl.DataFrame()
 
         df = pl.DataFrame(records)
+
+        if user_id is not None:
+            df = df.filter(pl.col("User ID") == user_id)
+
         return df.filter(pl.col("Date") == date_str)
     except Exception as e:
         logger.error(f"Gagal membaca transaksi harian: {e}")
         return pl.DataFrame()
 
 
-def delete_last_transaction() -> dict | None:
+def delete_last_transaction(user_id: int) -> dict | None:
     """
-    Hapus baris transaksi terakhir dari sheet Transactions.
+    Hapus baris transaksi terakhir milik user_id dari sheet Transactions.
     Return dict dengan description dan amount jika berhasil, None jika kosong.
     """
     try:
@@ -96,20 +103,49 @@ def delete_last_transaction() -> dict | None:
         if len(all_values) <= 1:
             return None
 
-        row_index = len(all_values)
         header = all_values[0]
-        last_row = all_values[-1]
+        user_id_col = header.index("User ID")
 
-        description = last_row[header.index("Description")]
-        amount = int(last_row[header.index("Amount")])
+        # Cari baris transaksi terakhir milik user_id
+        target_row: int | None = None
+        for i in range(len(all_values) - 1, 0, -1):
+            row = all_values[i]
+            if len(row) > user_id_col and row[user_id_col] == str(user_id):
+                target_row = i + 1  # 1-indexed untuk Sheets API
+                break
 
-        ws.delete_rows(row_index)
+        if target_row is None:
+            return None
+
+        description = all_values[target_row - 1][header.index("Description")]
+        amount = int(all_values[target_row - 1][header.index("Amount")])
+
+        ws.delete_rows(target_row)
 
         logger.info(f"Transaksi dihapus: {description} - Rp {amount:,}")
         return {"description": description, "amount": amount}
     except Exception as e:
         logger.error(f"Gagal menghapus transaksi: {e}")
         return None
+
+
+def get_unique_user_ids() -> list[int]:
+    """Ambil semua unique user_id dari sheet Transactions."""
+    try:
+        client = _get_client()
+        sheet = client.open_by_key(config.SPREADSHEET_ID)
+        ws = sheet.worksheet(SHEET_TRANSACTIONS)
+        records = ws.get_all_records()
+
+        if not records:
+            return []
+
+        df = pl.DataFrame(records)
+        user_ids = df["User ID"].unique().cast(pl.Int64).to_list()
+        return [int(uid) for uid in user_ids]
+    except Exception as e:
+        logger.error(f"Gagal membaca user_ids: {e}")
+        return []
 
 
 def compute_summary(df: pl.DataFrame) -> dict:
