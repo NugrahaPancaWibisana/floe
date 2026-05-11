@@ -24,9 +24,7 @@ logger = logging.getLogger(__name__)
 
 
 def _setup_webhook(app: Application, bot_token: str) -> None:
-    webhook_url = config.WEBHOOK_URL
-    assert webhook_url is not None
-    full_url = f"{webhook_url}/{bot_token}"
+    full_url = f"{config.WEBHOOK_URL}/{bot_token}"
     logger.info("\U0001f310 Webhook aktif: %s (port %d)", full_url, config.PORT)
     app.run_webhook(
         listen="0.0.0.0",
