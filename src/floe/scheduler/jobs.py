@@ -7,7 +7,11 @@ from telegram.ext import Application
 
 from floe import config
 from floe.bot.commands import _format_summary
-from floe.sheets.client import get_transactions_this_week, get_transactions_today
+from floe.sheets.client import (
+    get_transactions_this_week,
+    get_transactions_today,
+    get_unique_user_ids,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -19,27 +23,42 @@ def _parse_time(time_str: str) -> time:
     return time(hour=h, minute=m, tzinfo=WIB)
 
 
+async def _send_summary_to_users(context, get_transactions_fn, title: str, label: str) -> None:
+    user_ids = get_unique_user_ids()
+    if not user_ids:
+        logger.info("Tidak ada user_id ditemukan, lewati summary.")
+        return
+
+    for uid in user_ids:
+        df = get_transactions_fn(user_id=uid)
+        text = f"{title}\n\n" + _format_summary(df, label=label)
+        try:
+            await context.bot.send_message(
+                chat_id=uid,
+                text=text,
+                parse_mode=ParseMode.MARKDOWN,
+            )
+        except Exception as e:
+            logger.error(f"Gagal kirim summary ke user {uid}: {e}")
+
+
 async def job_daily_summary(context) -> None:
     logger.info("Menjalankan daily summary job...")
-    df = get_transactions_today()
-    text = "🌙 *Ringkasan Harian Floe*\n\n" + _format_summary(df, label="Hari Ini")
-
-    await context.bot.send_message(
-        chat_id=config.TELEGRAM_CHAT_ID,
-        text=text,
-        parse_mode=ParseMode.MARKDOWN,
+    await _send_summary_to_users(
+        context,
+        get_transactions_today,
+        "🌙 *Ringkasan Harian Floe*",
+        "Hari Ini",
     )
 
 
 async def job_weekly_summary(context) -> None:
     logger.info("Menjalankan weekly summary job...")
-    df = get_transactions_this_week()
-    text = "📅 *Ringkasan Mingguan Floe*\n\n" + _format_summary(df, label="7 Hari Terakhir")
-
-    await context.bot.send_message(
-        chat_id=config.TELEGRAM_CHAT_ID,
-        text=text,
-        parse_mode=ParseMode.MARKDOWN,
+    await _send_summary_to_users(
+        context,
+        get_transactions_this_week,
+        "📅 *Ringkasan Mingguan Floe*",
+        "7 Hari Terakhir",
     )
 
 

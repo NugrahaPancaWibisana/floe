@@ -14,7 +14,6 @@ def _require(key: str) -> str:
 
 
 TELEGRAM_BOT_TOKEN: str = _require("TELEGRAM_BOT_TOKEN")
-TELEGRAM_CHAT_ID: int = int(_require("TELEGRAM_CHAT_ID"))
 
 GEMINI_API_KEY: str = _require("GEMINI_API_KEY")
 GEMINI_MODEL: str = os.getenv("GEMINI_MODEL", "gemini-2.0-flash-lite")
