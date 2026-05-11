@@ -34,6 +34,7 @@ async def cmd_start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         "*Perintah tersedia:*\n"
         "/summary — Ringkasan hari ini\n"
         "/weekly — Ringkasan 7 hari terakhir\n"
+        "/budget — Atur budget per kategori\n"
         "/export — Ekspor CSV bulan ini\n"
         "/help — Bantuan lengkap\n\n"
         "_Mulai catat sekarang!_"
@@ -61,6 +62,7 @@ async def cmd_help(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         "*Perintah:*\n"
         "/summary — Ringkasan pengeluaran hari ini\n"
         "/weekly — Ringkasan 7 hari terakhir\n"
+        "/budget — Atur budget per kategori\n"
         "/export — Ekspor CSV bulan ini\n"
     )
     await message.reply_text(text, parse_mode=ParseMode.MARKDOWN)
