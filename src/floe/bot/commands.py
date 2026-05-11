@@ -15,8 +15,9 @@ logger = logging.getLogger(__name__)
 
 
 async def cmd_start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    user = update.effective_user
     text = (
-        "🌊 *Selamat datang di Floe!*\n\n"
+        f"🌊 *Selamat datang, {user.first_name}!*\n\n"
         "Saya akan mencatat keuangan kamu secara otomatis.\n\n"
         "*Cara pakai:*\n"
         "• Kirim pesan teks: `Makan siang 35rb`\n"
@@ -53,21 +54,21 @@ async def cmd_help(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
 
 async def cmd_summary(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     await update.message.reply_text("⏳ Mengambil data...")
-    df = get_transactions_today()
+    df = get_transactions_today(user_id=update.effective_user.id)
     text = _format_summary(df, label="Hari Ini")
     await update.message.reply_text(text, parse_mode=ParseMode.MARKDOWN)
 
 
 async def cmd_weekly(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     await update.message.reply_text("⏳ Mengambil data...")
-    df = get_transactions_this_week()
+    df = get_transactions_this_week(user_id=update.effective_user.id)
     text = _format_summary(df, label="7 Hari Terakhir")
     await update.message.reply_text(text, parse_mode=ParseMode.MARKDOWN)
 
 
 async def cmd_delete(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """Handler untuk /delete — hapus transaksi terakhir."""
-    result = delete_last_transaction()
+    result = delete_last_transaction(user_id=update.effective_user.id)
 
     if result is None:
         await update.message.reply_text("📭 Belum ada transaksi yang bisa dihapus.")

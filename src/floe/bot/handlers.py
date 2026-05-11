@@ -27,6 +27,7 @@ async def handle_text(update: Update, context: ContextTypes.DEFAULT_TYPE) -> Non
         )
         return
 
+    tx.user_id = update.effective_user.id
     success = append_transaction(tx)
 
     if success:
@@ -62,6 +63,7 @@ async def handle_photo(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
         )
         return
 
+    tx.user_id = update.effective_user.id
     success = append_transaction(tx)
 
     if success:
