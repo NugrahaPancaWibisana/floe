@@ -6,12 +6,15 @@ from telegram import Update
 from telegram.constants import ParseMode
 from telegram.ext import ContextTypes
 
+from floe.models import VALID_CATEGORIES
 from floe.sheets.client import (
     compute_summary,
     delete_last_transaction,
+    get_budgets,
     get_transactions_this_month,
     get_transactions_this_week,
     get_transactions_today,
+    set_budget,
 )
 
 logger = logging.getLogger(__name__)
@@ -120,6 +123,48 @@ async def cmd_export(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None
     await message.reply_document(
         document=io.BytesIO(csv_bytes),
         filename=f"floe_{now.year}_{now.month:02d}.csv",
+    )
+
+
+async def cmd_budget(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    user = update.effective_user
+    message = update.message
+    if user is None or message is None:
+        return
+
+    args = context.args
+    if len(args) < 2:
+        budgets = get_budgets(user.id)
+        if budgets:
+            lines = ["💰 *Budget Bulan Ini*\n"]
+            for cat, limit in sorted(budgets.items()):
+                lines.append(f"  • {cat}: Rp {limit:,}")
+            await message.reply_text("\n".join(lines), parse_mode=ParseMode.MARKDOWN)
+        else:
+            await message.reply_text(
+                "📭 Belum ada budget. Gunakan:\n`/budget <kategori> <jumlah>`\n\n"
+                "Contoh: `/budget makan 1000000`",
+                parse_mode=ParseMode.MARKDOWN,
+            )
+        return
+
+    category = args[0].lower()
+    if category not in VALID_CATEGORIES:
+        await message.reply_text(
+            f"❌ Kategori tidak valid. Pilih salah satu:\n{', '.join(VALID_CATEGORIES)}",
+        )
+        return
+
+    try:
+        limit = int(args[1].replace(".", "").replace("rb", "000").replace("jt", "000000"))
+    except ValueError:
+        await message.reply_text("❌ Jumlah tidak valid. Contoh: `/budget makan 1000000`")
+        return
+
+    set_budget(user.id, category, limit)
+    await message.reply_text(
+        f"✅ Budget *{category}* diset ke Rp {limit:,}",
+        parse_mode=ParseMode.MARKDOWN,
     )
 
 
