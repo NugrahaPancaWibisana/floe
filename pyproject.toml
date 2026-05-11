@@ -1,0 +1,48 @@
+[project]
+name = "floe"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    "google-generativeai>=0.8.6",
+    "gspread>=6.2.1",
+    "polars>=1.40.1",
+    "python-dotenv>=1.2.2",
+    "python-telegram-bot[job-queue]>=22.7",
+    "pytz>=2026.2",
+]
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+
+[tool.ruff.lint]
+select = ["E4", "E7", "E9", "F", "B", "I", "UP"]
+
+[tool.ruff.format]
+docstring-code-format = true
+quote-style = "double"
+
+[dependency-groups]
+dev = [
+    "pytest>=9.0.3",
+    "ruff>=0.15.12",
+    "ty>=0.0.34",
+]
+
+[tool.ty.environment]
+root = ["./src"]
+
+[tool.ty.rules]
+all = "warn"
+
+[[tool.ty.overrides]]
+include = ["src/**"]
+
+[tool.ty.overrides.rules]
+possibly-unresolved-reference = "error"
+
+[tool.ty.terminal]
+error-on-warning = false
+output-format = "full"
