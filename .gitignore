@@ -20,3 +20,6 @@ guide.md
 
 # Task notes
 tasks/
+
+# Playwright MCP browser artifacts
+.playwright-mcp/

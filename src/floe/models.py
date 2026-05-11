@@ -1,6 +1,7 @@
-from dataclasses import dataclass, field
 from datetime import datetime
 from enum import StrEnum
+
+from pydantic import BaseModel, Field
 
 
 class TransactionType(StrEnum):
@@ -28,16 +29,15 @@ VALID_CATEGORIES = [
 ]
 
 
-@dataclass
-class Transaction:
+class Transaction(BaseModel):
     amount: int
     type: TransactionType
     category: str
     description: str
     source: TransactionSource
-    date: str = field(default_factory=lambda: datetime.now().strftime("%d/%m/%Y"))
+    date: str = Field(default_factory=lambda: datetime.now().strftime("%d/%m/%Y"))
     note: str = ""
-    timestamp: str = field(default_factory=lambda: datetime.now().isoformat(timespec="seconds"))
+    timestamp: str = Field(default_factory=lambda: datetime.now().isoformat(timespec="seconds"))
 
     def to_row(self) -> list[str | int]:
         return [

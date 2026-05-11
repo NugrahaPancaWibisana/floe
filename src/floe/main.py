@@ -18,7 +18,7 @@ logger = logging.getLogger(__name__)
 def main() -> None:
     logger.info("\U0001f300 Floe Finance Tracker starting up...")
 
-    app = Application.builder().token(config.TELEGRAM_BOT_TOKEN).build()
+    app = Application.builder().token(config.TELEGRAM_BOT_TOKEN.get_secret_value()).build()
 
     # --- Daftarkan Command Handlers ---
     app.add_handler(CommandHandler("start", cmd_start))

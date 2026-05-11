@@ -16,6 +16,9 @@ logger = logging.getLogger(__name__)
 
 async def cmd_start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     user = update.effective_user
+    message = update.message
+    if user is None or message is None:
+        return
     text = (
         f"🌊 *Selamat datang, {user.first_name}!*\n\n"
         "Saya akan mencatat keuangan kamu secara otomatis.\n\n"
@@ -28,10 +31,13 @@ async def cmd_start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         "/help — Bantuan lengkap\n\n"
         "_Mulai catat sekarang!_"
     )
-    await update.message.reply_text(text, parse_mode=ParseMode.MARKDOWN)
+    await message.reply_text(text, parse_mode=ParseMode.MARKDOWN)
 
 
 async def cmd_help(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    message = update.message
+    if message is None:
+        return
     text = (
         "📖 *Panduan Floe*\n\n"
         "*Format teks yang bisa kamu kirim:*\n"
@@ -49,32 +55,43 @@ async def cmd_help(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         "/summary — Ringkasan pengeluaran hari ini\n"
         "/weekly — Ringkasan 7 hari terakhir\n"
     )
-    await update.message.reply_text(text, parse_mode=ParseMode.MARKDOWN)
+    await message.reply_text(text, parse_mode=ParseMode.MARKDOWN)
 
 
 async def cmd_summary(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    await update.message.reply_text("⏳ Mengambil data...")
-    df = get_transactions_today(user_id=update.effective_user.id)
+    user = update.effective_user
+    message = update.message
+    if user is None or message is None:
+        return
+    await message.reply_text("⏳ Mengambil data...")
+    df = get_transactions_today(user_id=user.id)
     text = _format_summary(df, label="Hari Ini")
-    await update.message.reply_text(text, parse_mode=ParseMode.MARKDOWN)
+    await message.reply_text(text, parse_mode=ParseMode.MARKDOWN)
 
 
 async def cmd_weekly(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    await update.message.reply_text("⏳ Mengambil data...")
-    df = get_transactions_this_week(user_id=update.effective_user.id)
+    user = update.effective_user
+    message = update.message
+    if user is None or message is None:
+        return
+    await message.reply_text("⏳ Mengambil data...")
+    df = get_transactions_this_week(user_id=user.id)
     text = _format_summary(df, label="7 Hari Terakhir")
-    await update.message.reply_text(text, parse_mode=ParseMode.MARKDOWN)
+    await message.reply_text(text, parse_mode=ParseMode.MARKDOWN)
 
 
 async def cmd_delete(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    """Handler untuk /delete — hapus transaksi terakhir."""
-    result = delete_last_transaction(user_id=update.effective_user.id)
+    user = update.effective_user
+    message = update.message
+    if user is None or message is None:
+        return
+    result = delete_last_transaction(user_id=user.id)
 
     if result is None:
-        await update.message.reply_text("📭 Belum ada transaksi yang bisa dihapus.")
+        await message.reply_text("📭 Belum ada transaksi yang bisa dihapus.")
         return
 
-    await update.message.reply_text(
+    await message.reply_text(
         f"🗑️ *Transaksi dihapus:*\n\n➖ *{result['description']}*\n   Rp {result['amount']:,}",
         parse_mode=ParseMode.MARKDOWN,
     )

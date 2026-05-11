@@ -4,6 +4,7 @@ from datetime import datetime
 import gspread
 import polars as pl
 from google.oauth2.service_account import Credentials
+from gspread.utils import ValueInputOption
 
 from floe import config
 from floe.models import Transaction
@@ -32,7 +33,7 @@ def _ensure_user_tab(user_id: int) -> gspread.Worksheet:
         return sheet.worksheet(tab_name)
     except gspread.exceptions.WorksheetNotFound:
         ws = sheet.add_worksheet(title=tab_name, rows=100, cols=len(HEADER_ROW))
-        ws.append_row(HEADER_ROW, value_input_option="USER_ENTERED")
+        ws.append_row(HEADER_ROW, value_input_option=ValueInputOption.user_entered)
         logger.info("Tab baru dibuat: %s", tab_name)
         return ws
 
@@ -48,7 +49,7 @@ def _get_client() -> gspread.Client:
 def append_transaction(tx: Transaction, user_id: int) -> bool:
     try:
         ws = _ensure_user_tab(user_id)
-        ws.append_row(tx.to_row(), value_input_option="USER_ENTERED")
+        ws.append_row(tx.to_row(), value_input_option=ValueInputOption.user_entered)
         logger.info(f"Transaksi ditambahkan: {tx.description} - Rp {tx.amount:,}")
         return True
     except Exception as e:
@@ -142,6 +143,6 @@ def compute_summary(df: pl.DataFrame) -> dict:
     return {
         "total_in": total_in,
         "total_out": total_out,
-        "net": total_in - total_out,
+        "net": int(total_in) - int(total_out),
         "by_category": {row["Category"]: row["Amount"] for row in by_category},
     }
