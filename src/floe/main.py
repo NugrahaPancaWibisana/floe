@@ -23,10 +23,26 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 
+def _setup_webhook(app: Application, bot_token: str) -> None:
+    webhook_url = config.WEBHOOK_URL
+    assert webhook_url is not None
+    full_url = f"{webhook_url}/{bot_token}"
+    logger.info("\U0001f310 Webhook aktif: %s (port %d)", full_url, config.PORT)
+    app.run_webhook(
+        listen="0.0.0.0",
+        port=config.PORT,
+        url_path=bot_token,
+        webhook_url=full_url,
+        secret_token=config.WEBHOOK_SECRET,
+        drop_pending_updates=True,
+    )
+
+
 def main() -> None:
     logger.info("\U0001f300 Floe Finance Tracker starting up...")
 
-    app = Application.builder().token(config.TELEGRAM_BOT_TOKEN.get_secret_value()).build()
+    bot_token = config.TELEGRAM_BOT_TOKEN.get_secret_value()
+    app = Application.builder().token(bot_token).build()
 
     # --- Daftarkan Command Handlers ---
     app.add_handler(CommandHandler("start", cmd_start))
@@ -45,8 +61,11 @@ def main() -> None:
     # --- Daftarkan Scheduled Jobs ---
     register_jobs(app)
 
-    logger.info("\u2705 Bot siap. Mulai polling...")
-    app.run_polling(drop_pending_updates=True)
+    if config.WEBHOOK_URL:
+        _setup_webhook(app, bot_token)
+    else:
+        logger.info("\u2705 Bot siap. Mulai polling...")
+        app.run_polling(drop_pending_updates=True)
 
 
 if __name__ == "__main__":
