@@ -1,4 +1,6 @@
+import io
 import logging
+from datetime import datetime
 
 from telegram import Update
 from telegram.constants import ParseMode
@@ -7,6 +9,7 @@ from telegram.ext import ContextTypes
 from floe.sheets.client import (
     compute_summary,
     delete_last_transaction,
+    get_transactions_this_month,
     get_transactions_this_week,
     get_transactions_today,
 )
@@ -28,6 +31,7 @@ async def cmd_start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         "*Perintah tersedia:*\n"
         "/summary — Ringkasan hari ini\n"
         "/weekly — Ringkasan 7 hari terakhir\n"
+        "/export — Ekspor CSV bulan ini\n"
         "/help — Bantuan lengkap\n\n"
         "_Mulai catat sekarang!_"
     )
@@ -54,6 +58,7 @@ async def cmd_help(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         "*Perintah:*\n"
         "/summary — Ringkasan pengeluaran hari ini\n"
         "/weekly — Ringkasan 7 hari terakhir\n"
+        "/export — Ekspor CSV bulan ini\n"
     )
     await message.reply_text(text, parse_mode=ParseMode.MARKDOWN)
 
@@ -94,6 +99,27 @@ async def cmd_delete(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None
     await message.reply_text(
         f"🗑️ *Transaksi dihapus:*\n\n➖ *{result['description']}*\n   Rp {result['amount']:,}",
         parse_mode=ParseMode.MARKDOWN,
+    )
+
+
+async def cmd_export(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    user = update.effective_user
+    message = update.message
+    if user is None or message is None:
+        return
+    await message.reply_text("⏳ Mengambil data...")
+
+    df = get_transactions_this_month(user_id=user.id)
+
+    if df.is_empty():
+        await message.reply_text("📭 Belum ada transaksi bulan ini.")
+        return
+
+    now = datetime.now()
+    csv_bytes = df.write_csv().encode()
+    await message.reply_document(
+        document=io.BytesIO(csv_bytes),
+        filename=f"floe_{now.year}_{now.month:02d}.csv",
     )
 
 
