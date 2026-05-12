@@ -220,6 +220,10 @@ def compute_summary(df: pl.DataFrame) -> dict:
     if df.is_empty():
         return {"total_in": 0, "total_out": 0, "net": 0, "by_category": {}}
 
+    required_columns = {"Amount", "Type", "Category"}
+    if not required_columns.issubset(df.columns):
+        return {"total_in": 0, "total_out": 0, "net": 0, "by_category": {}}
+
     df = df.with_columns(pl.col("Amount").cast(pl.Int64, strict=False).fill_null(0))
 
     total_in = df.filter(pl.col("Type") == "pemasukan")["Amount"].sum()
