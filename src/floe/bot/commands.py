@@ -158,7 +158,15 @@ async def cmd_budget(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None
         return
 
     try:
-        limit = int(args[1].replace(".", "").replace("rb", "000").replace("jt", "000000"))
+        raw = args[1].replace(".", "").replace(",", ".")
+        multiplier = 1
+        if raw.endswith("jt"):
+            multiplier = 1_000_000
+            raw = raw[:-2]
+        elif raw.endswith("rb"):
+            multiplier = 1_000
+            raw = raw[:-2]
+        limit = int(float(raw) * multiplier)
     except ValueError:
         await message.reply_text("❌ Jumlah tidak valid. Contoh: `/budget makan 1000000`")
         return
