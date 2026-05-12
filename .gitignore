@@ -23,3 +23,10 @@ tasks/
 
 # Playwright MCP browser artifacts
 .playwright-mcp/
+
+# Editor config
+.vscode/
+
+# OS files
+.DS_Store
+Thumbs.db
