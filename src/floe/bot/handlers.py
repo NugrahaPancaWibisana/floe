@@ -6,7 +6,7 @@ from telegram.ext import ContextTypes
 
 from floe import config
 from floe.ai.gemini import parse_image, parse_text
-from floe.models import TransactionType
+from floe.models import Transaction, TransactionType
 from floe.sheets.client import append_transaction, check_budget_alert
 
 logger = logging.getLogger(__name__)
@@ -22,6 +22,42 @@ async def _check_access(update: Update) -> bool:
         await message.reply_text("🚫 Maaf, kamu belum terdaftar untuk menggunakan bot ini.")
         return False
     return True
+
+
+async def _process_transaction(
+    tx: Transaction | None,
+    update: Update,
+    user_id: int,
+    source_label: str = "Berhasil dicatat",
+    parse_error_message: str | None = None,
+) -> None:
+    message = update.message
+    if message is None:
+        return
+
+    if tx is None:
+        await message.reply_text(
+            parse_error_message
+            or "🤔 Saya tidak bisa membaca transaksi dari pesan itu.\n"
+            "Coba format seperti: `Makan siang 35rb` atau `Gaji 5jt`",
+            parse_mode=ParseMode.MARKDOWN,
+        )
+        return
+
+    success = append_transaction(tx, user_id=user_id)
+
+    if success:
+        msg = f"✅ *{source_label}!*\n\n{tx.format_summary_line()}"
+        alert = None
+        if tx.type == TransactionType.PENGELUARAN:
+            alert = check_budget_alert(user_id, tx.category)
+        if alert:
+            msg += f"\n\n{alert}"
+        await message.reply_text(msg, parse_mode=ParseMode.MARKDOWN)
+    else:
+        await message.reply_text(
+            "⚠️ Transaksi diparse tapi gagal disimpan ke Sheets. Cek log untuk detail."
+        )
 
 
 async def handle_text(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
@@ -40,30 +76,7 @@ async def handle_text(update: Update, context: ContextTypes.DEFAULT_TYPE) -> Non
     logger.info(f"Pesan masuk dari {user.id}: {text[:50]}")
 
     tx = parse_text(text)
-
-    if tx is None:
-        await message.reply_text(
-            "🤔 Saya tidak bisa membaca transaksi dari pesan itu.\n"
-            "Coba format seperti: `Makan siang 35rb` atau `Gaji 5jt`",
-            parse_mode=ParseMode.MARKDOWN,
-        )
-        return
-
-    success = append_transaction(tx, user_id=user.id)
-
-    if success:
-        await message.reply_text(
-            f"✅ *Berhasil dicatat!*\n\n{tx.format_summary_line()}",
-            parse_mode=ParseMode.MARKDOWN,
-        )
-        if tx.type == TransactionType.PENGELUARAN:
-            alert = check_budget_alert(user.id, tx.category)
-            if alert:
-                await message.reply_text(alert, parse_mode=ParseMode.MARKDOWN)
-    else:
-        await message.reply_text(
-            "⚠️ Transaksi diparse tapi gagal disimpan ke Sheets. Cek log untuk detail."
-        )
+    await _process_transaction(tx, update, user.id)
 
 
 async def handle_photo(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
@@ -88,24 +101,13 @@ async def handle_photo(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
     image_bytes = await photo_file.download_as_bytearray()
 
     tx = parse_image(bytes(image_bytes), mime_type="image/jpeg")
-
-    if tx is None:
-        await message.reply_text(
+    await _process_transaction(
+        tx,
+        update,
+        user.id,
+        source_label="Foto berhasil dicatat",
+        parse_error_message=(
             "🤔 Saya tidak bisa membaca transaksi dari foto ini.\n"
             "Pastikan foto cukup jelas dan berisi struk atau screenshot transfer."
-        )
-        return
-
-    success = append_transaction(tx, user_id=user.id)
-
-    if success:
-        await message.reply_text(
-            f"✅ *Foto berhasil dicatat!*\n\n{tx.format_summary_line()}",
-            parse_mode=ParseMode.MARKDOWN,
-        )
-        if tx.type == TransactionType.PENGELUARAN:
-            alert = check_budget_alert(user.id, tx.category)
-            if alert:
-                await message.reply_text(alert, parse_mode=ParseMode.MARKDOWN)
-    else:
-        await message.reply_text("⚠️ Foto diparse tapi gagal disimpan ke Sheets.")
+        ),
+    )
