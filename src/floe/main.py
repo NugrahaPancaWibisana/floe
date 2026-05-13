@@ -23,8 +23,8 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 
-def _setup_webhook(app: Application, bot_token: str) -> None:
-    full_url = f"{config.WEBHOOK_URL}/{bot_token}"
+def _setup_webhook(app: Application, bot_token: str, webhook_url: str) -> None:
+    full_url = f"{webhook_url.rstrip('/')}/{bot_token}"
     logger.info("\U0001f310 Webhook aktif: %s (port %d)", full_url, config.PORT)
     app.run_webhook(
         listen="0.0.0.0",
@@ -59,8 +59,9 @@ def main() -> None:
     # --- Daftarkan Scheduled Jobs ---
     register_jobs(app)
 
-    if config.WEBHOOK_URL:
-        _setup_webhook(app, bot_token)
+    webhook_url = config.WEBHOOK_URL
+    if webhook_url:
+        _setup_webhook(app, bot_token, webhook_url)
     else:
         logger.info("\u2705 Bot siap. Mulai polling...")
         app.run_polling(drop_pending_updates=True)
