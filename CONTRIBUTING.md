@@ -24,7 +24,7 @@ process for contributing to the project.
 
 ```bash
 # Clone the repository
-git clone https://github.com/yourusername/floe.git
+git clone https://github.com/NugrahaPancaWibisana/floe.git
 cd floe
 
 # Install dependencies
