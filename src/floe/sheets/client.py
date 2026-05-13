@@ -68,62 +68,43 @@ def append_transaction(tx: Transaction, user_id: int) -> bool:
         return False
 
 
+def _get_transactions_df(user_id: int) -> pl.DataFrame | None:
+    try:
+        ws = _ensure_user_tab(user_id)
+        records = ws.get_all_records()
+        if not records:
+            return None
+        df = pl.DataFrame(records)
+        return df.with_columns(pl.col("Date").str.strptime(pl.Date, "%d/%m/%Y", strict=False))
+    except Exception as e:
+        logger.error(f"Gagal membaca transaksi: {e}")
+        return None
+
+
 def get_transactions_today(user_id: int) -> pl.DataFrame:
-    today = datetime.now().strftime("%d/%m/%Y")
-    return _get_transactions_by_date(today, user_id)
+    df = _get_transactions_df(user_id)
+    if df is None:
+        return pl.DataFrame()
+    today = datetime.now().date()
+    return df.filter(pl.col("Date") == today)
 
 
 def get_transactions_this_month(user_id: int) -> pl.DataFrame:
-    try:
-        ws = _ensure_user_tab(user_id)
-        records = ws.get_all_records()
-
-        if not records:
-            return pl.DataFrame()
-
-        df = pl.DataFrame(records)
-        df = df.with_columns(pl.col("Date").str.strptime(pl.Date, "%d/%m/%Y", strict=False))
-        now = datetime.now()
-        df = df.filter(
-            (pl.col("Date").dt.year() == now.year) & (pl.col("Date").dt.month() == now.month)
-        )
-        return df
-    except Exception as e:
-        logger.error(f"Gagal membaca transaksi bulanan: {e}")
+    df = _get_transactions_df(user_id)
+    if df is None:
         return pl.DataFrame()
+    now = datetime.now()
+    return df.filter(
+        (pl.col("Date").dt.year() == now.year) & (pl.col("Date").dt.month() == now.month)
+    )
 
 
 def get_transactions_this_week(user_id: int) -> pl.DataFrame:
-    try:
-        ws = _ensure_user_tab(user_id)
-        records = ws.get_all_records()
-
-        if not records:
-            return pl.DataFrame()
-
-        df = pl.DataFrame(records)
-        df = df.with_columns(pl.col("Date").str.strptime(pl.Date, "%d/%m/%Y", strict=False))
-        cutoff = datetime.now().date()
-        df = df.filter(pl.col("Date") >= pl.lit(cutoff).dt.offset_by("-7d"))
-        return df
-    except Exception as e:
-        logger.error(f"Gagal membaca transaksi mingguan: {e}")
+    df = _get_transactions_df(user_id)
+    if df is None:
         return pl.DataFrame()
-
-
-def _get_transactions_by_date(date_str: str, user_id: int) -> pl.DataFrame:
-    try:
-        ws = _ensure_user_tab(user_id)
-        records = ws.get_all_records()
-
-        if not records:
-            return pl.DataFrame()
-
-        df = pl.DataFrame(records)
-        return df.filter(pl.col("Date") == date_str)
-    except Exception as e:
-        logger.error(f"Gagal membaca transaksi harian: {e}")
-        return pl.DataFrame()
+    cutoff = datetime.now().date()
+    return df.filter(pl.col("Date") >= pl.lit(cutoff).dt.offset_by("-7d"))
 
 
 def delete_last_transaction(user_id: int) -> dict | None:
