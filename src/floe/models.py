@@ -1,7 +1,8 @@
+import re
 from datetime import datetime
 from enum import StrEnum
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 
 
 class TransactionType(StrEnum):
@@ -38,6 +39,13 @@ class Transaction(BaseModel):
     date: str = Field(default_factory=lambda: datetime.now().strftime("%d/%m/%Y"))
     note: str = ""
     timestamp: str = Field(default_factory=lambda: datetime.now().isoformat(timespec="seconds"))
+
+    @field_validator("date")
+    @classmethod
+    def _validate_date(cls, v: str) -> str:
+        if not re.match(r"^\d{2}/\d{2}/\d{4}$", v):
+            raise ValueError(f"Invalid date format, expected dd/mm/yyyy: {v}")
+        return v
 
     def to_row(self) -> list[str | int]:
         return [
