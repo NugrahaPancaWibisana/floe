@@ -24,7 +24,7 @@ class GeminiOutput(BaseModel):
     success: bool
     date: str = ""
     amount: int = 0
-    type: str = ""
+    type: TransactionType = TransactionType.PENGELUARAN
     category: str = ""
     description: str = ""
     note: str = ""
@@ -124,7 +124,7 @@ def _call_gemini(
     return Transaction(
         date=output.date or datetime.now().strftime("%d/%m/%Y"),
         amount=output.amount,
-        type=TransactionType(output.type),
+        type=output.type,
         category=output.category or "lainnya",
         description=output.description,
         source=source,
