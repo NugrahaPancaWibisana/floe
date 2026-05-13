@@ -41,10 +41,17 @@ def _ensure_user_tab(user_id: int) -> gspread.Worksheet:
 
 
 def _get_client() -> gspread.Client:
-    creds = Credentials.from_service_account_file(
-        config.GOOGLE_SERVICE_ACCOUNT_FILE,
-        scopes=SCOPES,
-    )
+    if config.GOOGLE_SERVICE_ACCOUNT_B64:
+        import base64
+        import json
+
+        info = json.loads(base64.b64decode(config.GOOGLE_SERVICE_ACCOUNT_B64))
+        creds = Credentials.from_service_account_info(info, scopes=SCOPES)
+    else:
+        creds = Credentials.from_service_account_file(
+            config.GOOGLE_SERVICE_ACCOUNT_FILE,
+            scopes=SCOPES,
+        )
     return gspread.authorize(creds)
 
 
