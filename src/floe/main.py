@@ -39,6 +39,12 @@ def _setup_webhook(app: Application, bot_token: str, webhook_url: str) -> None:
 def main() -> None:
     logger.info("\U0001f300 Floe Finance Tracker starting up...")
 
+    if not config.ALLOWED_USER_IDS:
+        logger.warning(
+            "ALLOWED_USER_IDS is empty -- no users will be able to use the bot. "
+            "Set ALLOWED_USER_IDS in .env to grant access."
+        )
+
     bot_token = config.TELEGRAM_BOT_TOKEN.get_secret_value()
     app = Application.builder().token(bot_token).build()
 
