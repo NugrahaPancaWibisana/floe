@@ -61,10 +61,10 @@ def append_transaction(tx: Transaction, user_id: int) -> bool:
     try:
         ws = _ensure_user_tab(user_id)
         ws.append_row(tx.to_row(), value_input_option=ValueInputOption.user_entered)
-        logger.info(f"Transaksi ditambahkan: {tx.description} - Rp {tx.amount:,}")
+        logger.info("Transaksi ditambahkan: %s - Rp %s", tx.description, f"{tx.amount:,}")
         return True
     except Exception as e:
-        logger.error(f"Gagal menulis ke Sheets: {e}")
+        logger.error("Gagal menulis ke Sheets: %s", e)
         return False
 
 
@@ -77,7 +77,7 @@ def _get_transactions_df(user_id: int) -> pl.DataFrame | None:
         df = pl.DataFrame(records)
         return df.with_columns(pl.col("Date").str.strptime(pl.Date, "%d/%m/%Y", strict=False))
     except Exception as e:
-        logger.error(f"Gagal membaca transaksi: {e}")
+        logger.error("Gagal membaca transaksi: %s", e)
         return None
 
 
@@ -128,10 +128,10 @@ def delete_last_transaction(user_id: int) -> dict | None:
 
         ws.delete_rows(row_index)
 
-        logger.info(f"Transaksi dihapus: {description} - Rp {amount:,}")
+        logger.info("Transaksi dihapus: %s - Rp %s", description, f"{amount:,}")
         return {"description": description, "amount": amount}
     except Exception as e:
-        logger.error(f"Gagal menghapus transaksi: {e}")
+        logger.error("Gagal menghapus transaksi: %s", e)
         return None
 
 
