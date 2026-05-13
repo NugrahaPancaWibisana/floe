@@ -17,6 +17,7 @@ class _Settings(BaseSettings):
     GEMINI_MODEL: str = "gemini-2.0-flash-lite"
     SPREADSHEET_ID: str = ""
     GOOGLE_SERVICE_ACCOUNT_FILE: str = "service_account.json"
+    GOOGLE_SERVICE_ACCOUNT_B64: str | None = None
     WEBHOOK_URL: str | None = None
     WEBHOOK_SECRET: str | None = None
     PORT: int = 8080
@@ -47,6 +48,7 @@ GEMINI_API_KEY: SecretStr = _settings.GEMINI_API_KEY
 GEMINI_MODEL: str = _settings.GEMINI_MODEL
 SPREADSHEET_ID: str = _settings.SPREADSHEET_ID
 GOOGLE_SERVICE_ACCOUNT_FILE: str = _settings.GOOGLE_SERVICE_ACCOUNT_FILE
+GOOGLE_SERVICE_ACCOUNT_B64: str | None = _settings.GOOGLE_SERVICE_ACCOUNT_B64
 WEBHOOK_URL: str | None = _settings.WEBHOOK_URL
 WEBHOOK_SECRET: str | None = _settings.WEBHOOK_SECRET
 PORT: int = _settings.PORT
