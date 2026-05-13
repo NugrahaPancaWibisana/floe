@@ -61,7 +61,7 @@ Unlike budgeting apps that require manual categorisation or paid subscriptions, 
 
 ```bash
 # Clone the repository
-git clone https://github.com/yourusername/floe.git
+git clone https://github.com/NugrahaPancaWibisana/floe.git
 cd floe
 
 # Install dependencies
