@@ -1,5 +1,6 @@
 import logging
 from datetime import datetime
+from functools import lru_cache
 
 import gspread
 import polars as pl
@@ -40,6 +41,7 @@ def _ensure_user_tab(user_id: int) -> gspread.Worksheet:
         return ws
 
 
+@lru_cache(maxsize=1)
 def _get_client() -> gspread.Client:
     if config.GOOGLE_SERVICE_ACCOUNT_B64:
         import base64
