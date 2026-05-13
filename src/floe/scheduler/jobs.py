@@ -1,9 +1,11 @@
 import logging
+from collections.abc import Callable
 from datetime import time
 
+import polars as pl
 import pytz
 from telegram.constants import ParseMode
-from telegram.ext import Application
+from telegram.ext import Application, ContextTypes
 
 from floe import config
 from floe.bot.commands import _format_summary
@@ -19,7 +21,12 @@ def _parse_time(time_str: str) -> time:
     return time(hour=h, minute=m, tzinfo=WIB)
 
 
-async def _send_summary_to_users(context, get_transactions_fn, title: str, label: str) -> None:
+async def _send_summary_to_users(
+    context: ContextTypes.DEFAULT_TYPE,
+    get_transactions_fn: Callable[..., pl.DataFrame],
+    title: str,
+    label: str,
+) -> None:
     for uid in config.ALLOWED_USER_IDS:
         df = get_transactions_fn(user_id=uid)
         text = f"{title}\n\n" + _format_summary(df, label=label)
@@ -33,7 +40,7 @@ async def _send_summary_to_users(context, get_transactions_fn, title: str, label
             logger.error(f"Gagal kirim summary ke user {uid}: {e}")
 
 
-async def job_daily_summary(context) -> None:
+async def job_daily_summary(context: ContextTypes.DEFAULT_TYPE) -> None:
     logger.info("Menjalankan daily summary job...")
     await _send_summary_to_users(
         context,
@@ -43,7 +50,7 @@ async def job_daily_summary(context) -> None:
     )
 
 
-async def job_weekly_summary(context) -> None:
+async def job_weekly_summary(context: ContextTypes.DEFAULT_TYPE) -> None:
     logger.info("Menjalankan weekly summary job...")
     await _send_summary_to_users(
         context,
