@@ -172,9 +172,16 @@ def get_budgets(user_id: int) -> dict[str, int]:
     """Ambil semua budget limit untuk user tertentu."""
     ws = _ensure_budgets_tab()
     records = ws.get_all_records()
-    return {
-        str(row["Category"]): int(row["Limit"]) for row in records if int(row["UserID"]) == user_id
-    }
+    result: dict[str, int] = {}
+    for row in records:
+        if int(row["UserID"]) != user_id:
+            continue
+        try:
+            limit = int(row["Limit"])
+        except (ValueError, KeyError):
+            limit = 0
+        result[str(row["Category"])] = limit
+    return result
 
 
 def check_budget_alert(user_id: int, category: str) -> str | None:
