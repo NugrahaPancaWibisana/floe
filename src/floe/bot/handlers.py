@@ -73,7 +73,7 @@ async def handle_text(update: Update, context: ContextTypes.DEFAULT_TYPE) -> Non
     if not await _check_access(update):
         return
 
-    logger.info(f"Pesan masuk dari {user.id}: {text[:50]}")
+    logger.info("Pesan masuk dari %s: %s", user.id, text[:50])
 
     tx = parse_text(text)
     await _process_transaction(tx, update, user.id)
@@ -94,7 +94,7 @@ async def handle_photo(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
 
     photo_file = await photos[-1].get_file()
 
-    logger.info(f"Foto masuk dari {user.id}, file_id: {photos[-1].file_id}")
+    logger.info("Foto masuk dari %s, file_id: %s", user.id, photos[-1].file_id)
 
     await message.reply_text("📸 Sedang membaca foto...")
 

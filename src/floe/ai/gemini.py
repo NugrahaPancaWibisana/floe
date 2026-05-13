@@ -113,12 +113,12 @@ def _call_gemini(
         else:
             reason = "UNKNOWN"
         logger.error(
-            f"Gemini response tidak sesuai schema: finish_reason={reason}, text={response.text}"
+            "Gemini response tidak sesuai schema: finish_reason=%s, text=%s", reason, response.text
         )
         return None
 
     if not output.success:
-        logger.info(f"Bukan transaksi: {output.reason}")
+        logger.info("Bukan transaksi: %s", output.reason)
         return None
 
     return Transaction(
