@@ -2,6 +2,7 @@ import io
 import logging
 from datetime import datetime
 
+import polars as pl
 from telegram import Update
 from telegram.constants import ParseMode
 from telegram.ext import ContextTypes
@@ -178,7 +179,7 @@ async def cmd_budget(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None
     )
 
 
-def _format_summary(df, label: str) -> str:
+def _format_summary(df: pl.DataFrame, label: str) -> str:
     summary = compute_summary(df)
 
     if summary["total_out"] == 0 and summary["total_in"] == 0:
