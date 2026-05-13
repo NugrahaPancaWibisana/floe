@@ -5,9 +5,9 @@
 The following versions of Floe are currently supported with security updates:
 
 | Version | Supported |
-|---------|-----------|
-| 0.2.x   | ✅ |
-| < 0.2   | ❌ |
+| ------- | --------- |
+| 0.2.x   | ✅        |
+| < 0.2   | ❌        |
 
 ## Reporting a Vulnerability
 
@@ -60,6 +60,7 @@ You should receive an initial response within **48 hours**. We will keep you inf
 ## Responsible Disclosure
 
 We ask that you:
+
 - Do not publicize the vulnerability before a fix is released
 - Do not exploit the vulnerability beyond what is necessary to demonstrate it
 - Follow our [Code of Conduct](CODE_OF_CONDUCT.md) during all interactions
