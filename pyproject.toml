@@ -38,7 +38,7 @@ quote-style = "double"
 dev = [
     "pytest>=9.0.3",
     "ruff>=0.15.14",
-    "ty>=0.0.42",
+    "ty>=0.0.46",
 ]
 
 [tool.ty.environment]
